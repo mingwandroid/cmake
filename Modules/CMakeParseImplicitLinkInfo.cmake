@@ -16,9 +16,10 @@
 # This is used internally by CMake and should not be included by user
 # code.
 
-function(CMAKE_PARSE_IMPLICIT_LINK_INFO text lib_var dir_var fwk_var log_var obj_regex)
+function(CMAKE_PARSE_IMPLICIT_LINK_INFO text lib_var dir_var linker_dir_var fwk_var log_var obj_regex)
   set(implicit_libs_tmp "")
   set(implicit_dirs_tmp)
+  set(implicit_linker_search_dirs_tmp)
   set(implicit_fwks_tmp)
   set(log "")
 
@@ -31,6 +32,7 @@ function(CMAKE_PARSE_IMPLICIT_LINK_INFO text lib_var dir_var fwk_var log_var obj
   # Construct a regex to match linker lines.  It must match both the
   # whole line and just the command (argv[0]).
   set(linker_regex "^( *|.*[/\\])(${linker}|([^/\\]+-)?ld|collect2)[^/\\]*( |$)")
+  set(linker_search_dir_regex "^ ?SEARCH_DIR\\(\"(.*)\"\\)$")
   set(linker_exclude_regex "collect2 version |^[A-Za-z0-9_]+=|/ldfe ")
   set(log "${log}  link line regex: [${linker_regex}]\n")
   string(REGEX REPLACE "\r?\n" ";" output_lines "${text}")
@@ -96,7 +98,10 @@ function(CMAKE_PARSE_IMPLICIT_LINK_INFO text lib_var dir_var fwk_var log_var obj
           set(log "${log}    arg [${arg}] ==> ignore\n")
         endif()
       endforeach()
-      break()
+    elseif("${line}" MATCHES "${linker_search_dir_regex}")
+      # Linker search directory
+      list(APPEND implicit_linker_search_dirs_tmp ${CMAKE_MATCH_1})
+      set(log "${log}    arg [${CMAKE_MATCH_1}] ==> dirs [${CMAKE_MATCH_1}]\n")
     elseif("${line}" MATCHES "LPATH(=| is:? *)(.*)$")
       set(log "${log}  LPATH line: [${line}]\n")
       # HP search path.
@@ -139,8 +144,9 @@ function(CMAKE_PARSE_IMPLICIT_LINK_INFO text lib_var dir_var fwk_var log_var obj
 
   # Cleanup list of library and framework directories.
   set(desc_dirs "library")
+  set(desc_linker_search_dirs "linker search dirs")
   set(desc_fwks "framework")
-  foreach(t dirs fwks)
+  foreach(t dirs linker_search_dirs fwks)
     set(implicit_${t} "")
     foreach(d IN LISTS implicit_${t}_tmp)
       get_filename_component(dir "${d}" ABSOLUTE)
@@ -156,14 +162,22 @@ function(CMAKE_PARSE_IMPLICIT_LINK_INFO text lib_var dir_var fwk_var log_var obj
     list(REMOVE_DUPLICATES implicit_${t})
   endforeach()
 
+  # If implicit_linker_search_dirs is empty replace with implicit_dirs.
+  if(NOT implicit_linker_search_dirs)
+      set(log "${log}  linker did not report search dirs, re-using implicit dirs\n")
+      set(implicit_linker_search_dirs ${implicit_dirs})
+  endif()
+
   # Log results.
   set(log "${log}  implicit libs: [${implicit_libs}]\n")
   set(log "${log}  implicit dirs: [${implicit_dirs}]\n")
+  set(log "${log}  implicit linker search dirs: [${implicit_linker_search_dirs}]\n")
   set(log "${log}  implicit fwks: [${implicit_fwks}]\n")
 
   # Return results.
   set(${lib_var} "${implicit_libs}" PARENT_SCOPE)
   set(${dir_var} "${implicit_dirs}" PARENT_SCOPE)
+  set(${linker_dir_var} "${implicit_linker_search_dirs}" PARENT_SCOPE)
   set(${fwk_var} "${implicit_fwks}" PARENT_SCOPE)
   set(${log_var} "${log}" PARENT_SCOPE)
 endfunction()

@@ -371,9 +371,9 @@ cmComputeLinkInformation::cmComputeLinkInformation(
   // Set up the implicit link directories.
   this->LoadImplicitLinkInfo();
   this->OrderLinkerSearchPath->SetImplicitDirectories(this->ImplicitLinkDirs);
-  this->OrderRuntimeSearchPath->SetImplicitDirectories(this->ImplicitLinkDirs);
+  this->OrderRuntimeSearchPath->SetImplicitDirectories(this->ImplicitLinkerSearchDirs);
   if (this->OrderDependentRPath) {
-    this->OrderDependentRPath->SetImplicitDirectories(this->ImplicitLinkDirs);
+    this->OrderDependentRPath->SetImplicitDirectories(this->ImplicitLinkerSearchDirs);
     this->OrderDependentRPath->AddLanguageDirectories(this->RuntimeLinkDirs);
   }
 
@@ -1545,6 +1545,19 @@ void cmComputeLinkInformation::LoadImplicitLinkInfo()
 
   // Store implicit link directories.
   this->ImplicitLinkDirs.insert(implicitDirVec.begin(), implicitDirVec.end());
+
+  implicitDirVec.clear();
+  // Get linker search directories.
+  implicitDirVar = "CMAKE_";
+  implicitDirVar += this->LinkLanguage;
+  implicitDirVar += "_IMPLICIT_LINKER_SEARCH_DIRECTORIES";
+  if (const char* implicitDirs =
+        this->Makefile->GetDefinition(implicitDirVar)) {
+    cmSystemTools::ExpandListArgument(implicitDirs, implicitDirVec);
+  }
+
+  // Store implicit linker search directories.
+  this->ImplicitLinkerSearchDirs.insert(implicitDirVec.begin(), implicitDirVec.end());
 
   // Get language-specific implicit libraries.
   std::vector<std::string> implicitLibVec;
