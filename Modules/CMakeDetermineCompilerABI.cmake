@@ -15,8 +15,13 @@ function(CMAKE_DETERMINE_COMPILER_ABI lang src)
     # Compile the ABI identification source.
     set(BIN "${CMAKE_PLATFORM_INFO_DIR}/CMakeDetermineCompilerABI_${lang}.bin")
     set(CMAKE_FLAGS )
-    if(DEFINED CMAKE_${lang}_VERBOSE_FLAG)
-      set(CMAKE_FLAGS "-DEXE_LINKER_FLAGS=${CMAKE_${lang}_VERBOSE_FLAG}")
+    if(DEFINED CMAKE_${lang}_LINKER_VERBOSE_FLAG)
+      set(USED_VERBOSE_FLAG "${CMAKE_${lang}_VERBOSE_FLAG} ${CMAKE_${lang}_LINKER_VERBOSE_FLAG}")
+    elseif(DEFINED CMAKE_${lang}_VERBOSE_FLAG)
+      set(USED_VERBOSE_FLAG "${CMAKE_${lang}_VERBOSE_FLAG}")
+    endif()
+    if(DEFINED USED_VERBOSE_FLAG)
+      set(CMAKE_FLAGS "-DEXE_LINKER_FLAGS=${USED_VERBOSE_FLAG}")
     endif()
     if(NOT "x${CMAKE_${lang}_COMPILER_ID}" STREQUAL "xMSVC")
       # Avoid adding our own platform standard libraries for compilers
@@ -65,10 +70,11 @@ function(CMAKE_DETERMINE_COMPILER_ABI lang src)
       # Parse implicit linker information for this language, if available.
       set(implicit_dirs "")
       set(implicit_libs "")
+      set(implicit_linker_search_dirs "")
       set(implicit_fwks "")
-      if(CMAKE_${lang}_VERBOSE_FLAG)
-        CMAKE_PARSE_IMPLICIT_LINK_INFO("${OUTPUT}" implicit_libs implicit_dirs implicit_fwks log
-          "${CMAKE_${lang}_IMPLICIT_OBJECT_REGEX}")
+      if(DEFINED USED_VERBOSE_FLAG)
+        CMAKE_PARSE_IMPLICIT_LINK_INFO("${OUTPUT}" implicit_libs implicit_dirs implicit_linker_search_dirs
+          implicit_fwks log "${CMAKE_${lang}_IMPLICIT_OBJECT_REGEX}")
         file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log
           "Parsed ${lang} implicit link information from above output:\n${log}\n\n")
       endif()
@@ -105,6 +111,7 @@ function(CMAKE_DETERMINE_COMPILER_ABI lang src)
 
       set(CMAKE_${lang}_IMPLICIT_LINK_LIBRARIES "${implicit_libs}" PARENT_SCOPE)
       set(CMAKE_${lang}_IMPLICIT_LINK_DIRECTORIES "${implicit_dirs}" PARENT_SCOPE)
+      set(CMAKE_${lang}_IMPLICIT_LINKER_SEARCH_DIRECTORIES "${implicit_linker_search_dirs}" PARENT_SCOPE)
       set(CMAKE_${lang}_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "${implicit_fwks}" PARENT_SCOPE)
 
       # Detect library architecture directory name.
