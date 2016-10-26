@@ -107,15 +107,15 @@ if(CURSES_USE_NCURSES)
   # Use CURSES_NCURSES_INCLUDE_PATH if set, for compatibility.
   if(CURSES_NCURSES_INCLUDE_PATH)
     find_path(CURSES_INCLUDE_PATH
-      NAMES ncurses/ncurses.h ncurses/curses.h ncurses.h curses.h
-      PATHS ${CURSES_NCURSES_INCLUDE_PATH}
+      NAMES ncurses.h curses.h
+      PATHS "${CURSES_NCURSES_INCLUDE_PATH}" "${CURSES_NCURSES_INCLUDE_PATH}/ncurses"
       NO_DEFAULT_PATH
       )
   endif()
 
   find_path(CURSES_INCLUDE_PATH
-    NAMES ncurses/ncurses.h ncurses/curses.h ncurses.h curses.h
-    HINTS "${_cursesParentDir}/include"
+    NAMES ncurses.h curses.h
+    HINTS "${_cursesParentDir}/include" "${CMAKE_PREFIX_PATH}/include/ncurses"
     )
 
   # Previous versions of FindCurses provided these values.
